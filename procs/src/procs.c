@@ -415,7 +415,6 @@ int procs_opt(procs_ctx_t *procs_ctx, const char *tag, ...)
 	va_list arg;
 	int end_code= STAT_ERROR;
 	LOG_CTX_INIT(NULL);
-
 	/* Check arguments */
 	CHECK_DO(procs_ctx!= NULL, return STAT_ERROR);
 	CHECK_DO(tag!= NULL, return STAT_ERROR);

@@ -350,7 +350,6 @@ int proc_opt(proc_ctx_t *proc_ctx, const char *tag, ...)
 	va_start(arg, tag);
 
 	end_code= proc_vopt(proc_ctx, tag, arg);
-
 	va_end(arg);
 
 	return end_code;
@@ -358,9 +357,11 @@ int proc_opt(proc_ctx_t *proc_ctx, const char *tag, ...)
 
 int proc_vopt(proc_ctx_t *proc_ctx, const char *tag, va_list arg)
 {
+	printf("[proc.c] proc_vopt socket \n");
 	int end_code= STAT_ERROR;
 	const proc_if_t *proc_if= NULL;
 	int (*rest_put)(proc_ctx_t *proc_ctx, const char *str)= NULL;
+	int (*socket_put)(proc_ctx_t *proc_ctx, const char *str)= NULL;
 	int (*opt)(proc_ctx_t *proc_ctx, const char *tag, va_list arg)= NULL;
 	LOG_CTX_INIT(NULL);
 
@@ -373,7 +374,6 @@ int proc_vopt(proc_ctx_t *proc_ctx, const char *tag, va_list arg)
 	LOG_CTX_SET(proc_ctx->log_ctx);
 
 	proc_if= proc_ctx->proc_if;
-
 	if(TAG_IS("PROC_UNBLOCK")) {
 		fifo_set_blocking_mode(proc_ctx->fifo_ctx_array[PROC_IPUT], 0);
 		fifo_set_blocking_mode(proc_ctx->fifo_ctx_array[PROC_OPUT], 0);
@@ -384,12 +384,15 @@ int proc_vopt(proc_ctx_t *proc_ctx, const char *tag, va_list arg)
 		end_code= procs_id_get(proc_ctx, LOG_CTX_GET(), rest_fmt, ref_reponse);
 	} else if(TAG_IS("PROC_PUT")) {
 		end_code= STAT_ENOTFOUND;
-		if(proc_if!= NULL && (rest_put= proc_if->rest_put)!= NULL)
+		if(proc_if!= NULL && (rest_put= proc_if->rest_put)!= NULL && (socket_put= proc_if->socket_put)!=NULL)
 			end_code= rest_put(proc_ctx, va_arg(arg, const char*));
+//			end_code= socket_put(proc_ctx, va_arg(arg, const char*));// Mario
+			//end_code= socket_put(proc_ctx, "1,30");// Mario
 	} else {
 		if(proc_if!= NULL && (opt= proc_if->opt)!= NULL)
+		{
 			end_code= opt(proc_ctx, tag, arg);
-		else {
+		}else {
 			LOGE("Unknown option\n");
 			end_code= STAT_ENOTFOUND;
 		}
