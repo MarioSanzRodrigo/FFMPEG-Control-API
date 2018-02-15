@@ -62,6 +62,7 @@ void video_settings_enc_ctx_release(
 int video_settings_enc_ctx_init(
 		volatile video_settings_enc_ctx_t *video_settings_enc_ctx)
 {
+	printf("\n inicializacion de video_settings_enc_ctx_init \n");
 	LOG_CTX_INIT(NULL);
 
 	/* Check arguments */
@@ -74,7 +75,7 @@ int video_settings_enc_ctx_init(
 	video_settings_enc_ctx->gop_size= 15;
 	memset((void*)video_settings_enc_ctx->conf_preset, 0,
 			sizeof(video_settings_enc_ctx->conf_preset));
-	video_settings_enc_ctx->ql= 99;
+	video_settings_enc_ctx->ql= 50;
 	return STAT_SUCCESS;
 }
 
@@ -108,6 +109,7 @@ int video_settings_enc_ctx_restful_put(
 		volatile video_settings_enc_ctx_t *video_settings_enc_ctx,
 		const char *str, log_ctx_t *log_ctx)
 {
+	printf("\n [video_settings.c] video_settings_enc_ctx_restful_put---\n");
 	int end_code= STAT_ERROR;
 	int flag_is_query= 0; // 0-> JSON / 1->query string
 	cJSON *cjson_rest= NULL, *cjson_aux= NULL;
@@ -117,47 +119,47 @@ int video_settings_enc_ctx_restful_put(
 			*profile_str= NULL, *conf_preset_str= NULL, *ql_str= NULL;
 	LOG_CTX_INIT(log_ctx);
 
-	/* Check arguments */
+	// Check arguments 
 	CHECK_DO(video_settings_enc_ctx!= NULL, return STAT_ERROR);
 	CHECK_DO(str!= NULL, return STAT_EINVAL);
 
-	/* Guess string representation format (JSON-REST or Query) */
+	// Guess string representation format (JSON-REST or Query) 
 	//LOGV("'%s'\n", str); //comment-me
 	flag_is_query= (str[0]=='{' && str[strlen(str)-1]=='}')? 0: 1;
 
-	/* **** Parse RESTful string to get settings parameters **** */
+	// Parse RESTful string to get settings parameters
 
 	if(flag_is_query== 1) {
 
-		/* 'bit_rate_output' */
+		//'bit_rate_output' 
 		bit_rate_output_str= uri_parser_query_str_get_value("bit_rate_output",
 				str);
 		if(bit_rate_output_str!= NULL)
 			video_settings_enc_ctx->bit_rate_output= atoll(bit_rate_output_str);
 
-		/* 'frame_rate_output' */
+		// 'frame_rate_output'
 		frame_rate_output_str= uri_parser_query_str_get_value(
 				"frame_rate_output", str);
 		if(frame_rate_output_str!= NULL)
 			video_settings_enc_ctx->frame_rate_output=
 					atoll(frame_rate_output_str);
 
-		/* 'width_output' */
+		//'width_output' 
 		width_output_str= uri_parser_query_str_get_value("width_output", str);
 		if(width_output_str!= NULL)
 			video_settings_enc_ctx->width_output= atoll(width_output_str);
 
-		/* 'height_output' */
+		//'height_output'
 		height_output_str= uri_parser_query_str_get_value("height_output", str);
 		if(height_output_str!= NULL)
 			video_settings_enc_ctx->height_output= atoll(height_output_str);
 
-		/* 'gop_size' */
+		//'gop_size'
 		gop_size_str= uri_parser_query_str_get_value("gop_size", str);
 		if(gop_size_str!= NULL)
 			video_settings_enc_ctx->gop_size= atoll(gop_size_str);
 
-		/* 'conf_preset' */
+		//'conf_preset' 
 		conf_preset_str= uri_parser_query_str_get_value("conf_preset", str);
 		if(conf_preset_str!= NULL) {
 			CHECK_DO(strlen(conf_preset_str)<
@@ -168,43 +170,45 @@ int video_settings_enc_ctx_restful_put(
 			video_settings_enc_ctx->conf_preset[strlen(conf_preset_str)]= 0;
 		}
 
-		/* 'ql' */
+		printf("\n ---[video_settings.c -if] video_settings_enc_ctx_restful_put---\n");
+		//'ql' 
 		ql_str= uri_parser_query_str_get_value("ql", str);
+		printf("\n el valor de ql = %s : \n",ql_str);
 		if(ql_str!= NULL)
 			video_settings_enc_ctx->ql= atoll(ql_str);
 
 	} else {
 
-		/* In the case string format is JSON-REST, parse to cJSON structure */
+		// In the case string format is JSON-REST, parse to cJSON structure 
 		cjson_rest= cJSON_Parse(str);
 		CHECK_DO(cjson_rest!= NULL, goto end);
 
-		/* 'bit_rate_output' */
+		//'bit_rate_output'
 		cjson_aux= cJSON_GetObjectItem(cjson_rest, "bit_rate_output");
 		if(cjson_aux!= NULL)
 			video_settings_enc_ctx->bit_rate_output= cjson_aux->valuedouble;
 
-		/* 'frame_rate_output' */
+		//'frame_rate_output'
 		cjson_aux= cJSON_GetObjectItem(cjson_rest, "frame_rate_output");
 		if(cjson_aux!= NULL)
 			video_settings_enc_ctx->frame_rate_output= cjson_aux->valuedouble;
 
-		/* 'width_output' */
+		//'width_output'
 		cjson_aux= cJSON_GetObjectItem(cjson_rest, "width_output");
 		if(cjson_aux!= NULL)
 			video_settings_enc_ctx->width_output= cjson_aux->valuedouble;
 
-		/* 'height_output' */
+		//'height_output'
 		cjson_aux= cJSON_GetObjectItem(cjson_rest, "height_output");
 		if(cjson_aux!= NULL)
 			video_settings_enc_ctx->height_output= cjson_aux->valuedouble;
 
-		/* 'gop_size' */
+		//'gop_size'
 		cjson_aux= cJSON_GetObjectItem(cjson_rest, "gop_size");
 		if(cjson_aux!= NULL)
 			video_settings_enc_ctx->gop_size= cjson_aux->valuedouble;
 
-		/* 'conf_preset' */
+		//'conf_preset'
 		cjson_aux= cJSON_GetObjectItem(cjson_rest, "conf_preset");
 		if(cjson_aux!= NULL && cjson_aux->valuestring!= NULL) {
 			CHECK_DO(strlen(cjson_aux->valuestring)<
@@ -214,6 +218,8 @@ int video_settings_enc_ctx_restful_put(
 					cjson_aux->valuestring, strlen(cjson_aux->valuestring));
 			video_settings_enc_ctx->conf_preset
 			[strlen(cjson_aux->valuestring)]= 0;
+
+		printf("\n ---[video_settings.c -else] video_settings_enc_ctx_restful_put---\n");
 
 		cjson_aux= cJSON_GetObjectItem(cjson_rest, "ql");
 		if(cjson_aux!= NULL)
@@ -243,6 +249,143 @@ end:
 		free(conf_preset_str);
 	if(ql_str!= NULL)
 		free(ql_str);
+	return end_code;
+}
+
+int video_settings_enc_ctx_socket_put(
+		volatile video_settings_enc_ctx_t *video_settings_enc_ctx,
+		const char *str, log_ctx_t *log_ctx)
+{
+	printf("[video_settings.c] video_settings_enc_ctx_socket_put\n");
+	int end_code= STAT_ERROR;
+	int flag_is_query= 0; // 0-> JSON / 1->query string
+	cJSON *cjson_rest= NULL, *cjson_aux= NULL;
+	char *bit_rate_output_str= NULL, *frame_rate_output_str= NULL,
+			*width_output_str= NULL, *height_output_str= NULL,
+			*gop_size_str= NULL, *sample_fmt_input_str= NULL,
+			*profile_str= NULL, *conf_preset_str= NULL, *ql_str= NULL;
+	LOG_CTX_INIT(log_ctx);
+
+	// Check arguments 
+	CHECK_DO(video_settings_enc_ctx!= NULL, return STAT_ERROR);
+	CHECK_DO(str!= NULL, return STAT_EINVAL);
+
+	// Guess string representation format (JSON-REST or Query) 
+	//LOGV("'%s'\n", str); //comment-me
+
+	// [Mario] Revisar el caso de que no se le pase "flag_is_query"
+	flag_is_query= (str[0]=='{' && str[strlen(str)-1]=='}')? 0: 1;
+
+	// Parse RESTful string to get settings parameters
+
+	if(flag_is_query== 0) {
+
+		//'bit_rate_output' 
+		bit_rate_output_str= uri_parser_query_str_get_value("bit_rate_output",
+				str);
+		if(bit_rate_output_str!= NULL)
+			video_settings_enc_ctx->bit_rate_output= atoll(bit_rate_output_str);
+
+		// 'frame_rate_output'
+		frame_rate_output_str= uri_parser_query_str_get_value(
+				"frame_rate_output", str);
+		if(frame_rate_output_str!= NULL)
+			video_settings_enc_ctx->frame_rate_output=
+					atoll(frame_rate_output_str);
+
+		//'width_output' 
+		width_output_str= uri_parser_query_str_get_value("width_output", str);
+		if(width_output_str!= NULL)
+			video_settings_enc_ctx->width_output= atoll(width_output_str);
+
+		//'height_output'
+		height_output_str= uri_parser_query_str_get_value("height_output", str);
+		if(height_output_str!= NULL)
+			video_settings_enc_ctx->height_output= atoll(height_output_str);
+
+		//'gop_size'
+		gop_size_str= uri_parser_query_str_get_value("gop_size", str);
+		if(gop_size_str!= NULL)
+			video_settings_enc_ctx->gop_size= atoll(gop_size_str);
+
+		//'conf_preset' 
+		conf_preset_str= uri_parser_query_str_get_value("conf_preset", str);
+		if(conf_preset_str!= NULL) {
+			CHECK_DO(strlen(conf_preset_str)<
+					(sizeof(video_settings_enc_ctx->conf_preset)- 1),
+					end_code= STAT_EINVAL; goto end);
+			memcpy((void*)video_settings_enc_ctx->conf_preset, conf_preset_str,
+					strlen(conf_preset_str));
+			video_settings_enc_ctx->conf_preset[strlen(conf_preset_str)]= 0;
+		}
+
+		printf("\n ---[video_settings.c -if] video_settings_enc_ctx_restful_put---\n");
+		//'ql' 
+		ql_str= uri_parser_query_str_get_value("ql", str);
+		printf("\n [NO SOCKET] el valor de ql = %s : \n",ql_str);
+		if(ql_str!= NULL)
+			video_settings_enc_ctx->ql= atoll(ql_str);
+
+	// [Mario] Codigo para capturar el valor pasado por Socket
+	} else {
+
+	    	char function[20] = "";
+	    	char value[20] = "";
+	    	int aux= 0, j= 0, h= 0;
+
+		for (int i=0;i<sizeof(str);i++)
+			{
+			if(str[i] != ',' && aux== 0){
+				function[0+j] = str[i];
+				j = j + 1;
+			}else if (str[i] ==','){
+				aux = 1;
+			}else{
+				value[0+h] = str[i];
+				h = h + 1;
+			}
+		}
+
+		int res1 = atoi(function);
+		int res2 = atoi(value);
+
+		//'ql' 
+		printf("Datos del str: %s\n" , str);
+		printf("\n [SOCKET] el valor de ql = %d : \n",res2);
+		video_settings_enc_ctx->ql= res2;
+
+		memset(function,'\0', sizeof(function));
+		memset(value,'\0', sizeof(value));
+
+		h = 0;
+		j = 0;
+		aux = 0;
+	}
+
+	end_code= STAT_SUCCESS;
+
+end:
+	if(cjson_rest!= NULL)
+		cJSON_Delete(cjson_rest);
+	if(bit_rate_output_str!= NULL)
+		free(bit_rate_output_str);
+	if(frame_rate_output_str!= NULL)
+		free(frame_rate_output_str);
+	if(width_output_str!= NULL)
+		free(width_output_str);
+	if(height_output_str!= NULL)
+		free(height_output_str);
+	if(gop_size_str!= NULL)
+		free(gop_size_str);
+	if(sample_fmt_input_str!= NULL)
+		free(sample_fmt_input_str);
+	if(profile_str!= NULL)
+		free(profile_str);
+	if(conf_preset_str!= NULL)
+		free(conf_preset_str);
+	if(ql_str!= NULL)
+		free(ql_str);
+
 	return end_code;
 }
 

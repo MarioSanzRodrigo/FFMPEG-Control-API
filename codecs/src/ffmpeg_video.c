@@ -54,6 +54,7 @@ int ffmpeg_video_enc_ctx_init(ffmpeg_video_enc_ctx_t *ffmpeg_video_enc_ctx,
 		int avcodecid, const video_settings_enc_ctx_t *video_settings_enc_ctx,
 		log_ctx_t *log_ctx)
 {
+    printf(" [ffmpeg_video.c] ffmpeg_video_enc_ctx_init \n");
     int ret_code, end_code= STAT_ERROR;
     const AVCodec *avcodec= NULL; // Do not release
     AVCodecContext *avcodecctx= NULL; // Do not release
@@ -105,6 +106,7 @@ int ffmpeg_video_enc_ctx_init(ffmpeg_video_enc_ctx_t *ffmpeg_video_enc_ctx,
 			AV_PIX_FMT_YUV420P; // natively supported
 
     if(video_settings_enc_ctx->ql>= 0 && video_settings_enc_ctx->ql< 100) {
+	printf(" [ffmpeg_video.c] av_opt_set_init \n");
         av_opt_set_int(avcodecctx->priv_data, "ql",
                 video_settings_enc_ctx->ql, 0);
     }
