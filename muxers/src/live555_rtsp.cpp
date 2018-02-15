@@ -557,6 +557,7 @@ const proc_if_t proc_if_live555_rtsp_mux=
 	live555_rtsp_mux_rest_put,
 	live555_rtsp_mux_rest_get,
 	live555_rtsp_mux_process_frame,
+	NULL, // socket_udp 
 	live555_rtsp_mux_opt,
 	NULL, // input proc_frame_ctx to "private-frame-format"
 	NULL, // "private-frame-format" release
@@ -572,6 +573,7 @@ static const proc_if_t proc_if_live555_rtsp_es_mux=
 	NULL, //live555_rtsp_es_mux_rest_put // used internally only (not in API)
 	live555_rtsp_es_mux_rest_get,
 	live555_rtsp_es_mux_process_frame,
+	NULL, // socket_udp
 	NULL, //live555_rtsp_es_mux_opt
 	NULL,
 	NULL,
@@ -587,6 +589,7 @@ const proc_if_t proc_if_live555_rtsp_dmux=
 	live555_rtsp_dmux_rest_put,
 	live555_rtsp_dmux_rest_get,
 	live555_rtsp_dmux_process_frame,
+	NULL, // socket_udp
 	NULL, //live555_rtsp_dmux_opt,
 	NULL, // input proc_frame_ctx to "private-frame-format"
 	NULL, // "private-frame-format" release
