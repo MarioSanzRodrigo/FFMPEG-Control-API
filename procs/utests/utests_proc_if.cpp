@@ -66,6 +66,11 @@ static int dummy_proc_process_frame(proc_ctx_t*, fifo_ctx_t* i, fifo_ctx_t* o)
 	return STAT_SUCCESS;
 }
 
+static int dummy_proc_socket_put(proc_ctx_t*, const char *str)
+{
+	return STAT_SUCCESS;
+}
+
 static int dummy_proc_opt(proc_ctx_t*, const char *tag, va_list arg)
 {
 	return STAT_SUCCESS;
@@ -99,6 +104,7 @@ SUITE(UTESTS_PROC_IF)
 			dummy_proc_rest_put,
 			dummy_proc_rest_get,
 			dummy_proc_process_frame,
+			dummy_proc_socket_put,
 			dummy_proc_opt,
 			dummy_proc_iput_fifo_elem_dup,
 			dummy_proc_iput_fifo_elem_release,

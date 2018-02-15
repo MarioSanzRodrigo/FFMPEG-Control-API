@@ -207,6 +207,8 @@ end:
 	return end_code;
 }
 
+
+
 static int bypass_proc_process_frame(proc_ctx_t *proc_ctx,
 		fifo_ctx_t *fifo_ctx_iput, fifo_ctx_t *fifo_ctx_oput)
 {
@@ -377,7 +379,7 @@ end:
 			bypass_proc_rest_put,
 			bypass_proc_rest_get,
 			bypass_proc_process_frame,
-			NULL, NULL, NULL, NULL
+			NULL ,NULL, NULL, NULL, NULL
 		};
 		const proc_if_t proc_if_bypass_proc2= {
 			"bypass_processor2", "encoder2", "application/encoder2",
@@ -388,7 +390,7 @@ end:
 			bypass_proc_rest_put,
 			bypass_proc_rest_get,
 			bypass_proc_process_frame,
-			NULL, NULL, NULL, NULL
+			NULL ,NULL, NULL, NULL, NULL
 		};
 		LOG_CTX_INIT(NULL);
 
@@ -515,7 +517,7 @@ end:
 			bypass_proc_rest_put,
 			bypass_proc_rest_get,
 			bypass_proc_process_frame,
-			NULL, NULL, NULL, NULL
+			NULL, NULL, NULL, NULL, NULL
 		};
 		proc_frame_ctx_t *proc_frame_ctx= NULL;
 		uint8_t yuv_frame[48]= { // YUV4:2:0 simple data example
@@ -622,4 +624,10 @@ end:
 		proc_frame_ctx_release(&proc_frame_ctx);
 #undef FIFO_SIZE
 	}
+}
+
+static int bypass_proc_socket_put(proc_ctx_t *proc_ctx, const char *str)
+{
+
+	return 0;
 }
