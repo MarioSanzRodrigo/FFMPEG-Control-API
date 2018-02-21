@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #include <mongoose.h>
 #include <libcjson/cJSON.h>
@@ -75,6 +76,7 @@
 #define BREAK_EVENT  (SDL_USEREVENT + 2)
 
 static volatile int flag_app_exit= 0;
+struct timespec ts1, ts3;
 
 
 /**
@@ -547,6 +549,8 @@ static void http_event_handler(struct mg_connection *c, int ev, void *p)
 			procs_api_http_req_handler(thr_ctx->procs_ctx, url_str,
 					qstring_str, method_str, body_str, body_len, &str_response);
 			printf("[main.c] procs_api_http_req_handler \n");
+			clock_gettime( CLOCK_REALTIME, &ts3);
+			printf("TS3: %f\n", (float) (1.0*ts3.tv_nsec)*1e-9 + 1.0*ts3.tv_sec);
 		}
 		/* Send response */
 		if(str_response!= NULL && strlen(str_response)> 0) {
@@ -672,7 +676,10 @@ static void* socket_server_thr(void *t)
 			{
 			    die("recvfrom()");
 			}
-		
+			printf("Pillo el ts1\n");
+			clock_gettime( CLOCK_REALTIME, &ts1);
+			printf("TS1: %f\n", (float) (1.0*ts1.tv_nsec)*1e-9);
+
 			// Mostramos string recibido (funcion , valor) 
 			printf("\nReceived packet from %s:%d\n", inet_ntoa(serv_other.sin_addr), ntohs(serv_other.sin_port));
 			printf("Datos enviados: %s\n" , buf);
@@ -681,7 +688,7 @@ static void* socket_server_thr(void *t)
 
 			// Forzamos el tercer campo "proc_id" a 1.
 			//procs_opt(thr_ctx->procs_ctx, "PROCS_ID_PUT",1,buf);
-			procs_opt(thr_ctx->procs_ctx, "PROCS_ID_PUT",0,buf);
+			procs_opt(thr_ctx->procs_ctx, "PROCS_ID_SOCKET",0,buf);
 	
 			//[Para TEST] Enviamos ACK
 			sendto(s, "ACK", 3, 0, (struct sockaddr*) &serv_other, slen);
@@ -745,8 +752,8 @@ int main(int argc, char* argv[])
 
 
 	sigset_t set;
-	pthread_t producer_thread, mux_thread, dmux_thread, consumer_thread;
-//	pthread_t producer_thread, mux_thread, dmux_thread, consumer_thread, http_thread, socket_thread;
+//	pthread_t producer_thread, mux_thread, dmux_thread, consumer_thread;
+	pthread_t producer_thread, mux_thread, dmux_thread, consumer_thread, socket_thread;
 	int ret_code, enc_proc_id= -1, dec_proc_id= -1, mux_proc_id= -1,
 			dmux_proc_id= -1, elem_strem_id_video_server= -1;
 	procs_ctx_t *procs_ctx= NULL;
@@ -921,7 +928,10 @@ int main(int argc, char* argv[])
 	if(ret_code!= 0) {
 		fprintf(stderr, "Error at line 29: %d\n", __LINE__);
 		exit(-1);
-	}/*
+	}
+
+
+
 	printf("Starting Socket UDP Server...\n");
 	ret_code= pthread_create(&socket_thread, NULL, socket_server_thr,
 			&thr_ctx); //MARIO
@@ -930,20 +940,14 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "Error at line 30: %d\n", __LINE__);
 		exit(-1);
 	}
-	printf("Starting Http Server...\n");
-	ret_code= pthread_create(&http_thread, NULL, http_server_thr,
-			&thr_ctx); //MARIO
-	printf("##################### %d: \n",ret_code);
-	if(ret_code!= 0) {
-		fprintf(stderr, "Error at line 31: %d\n", __LINE__);
-		exit(-1);
-	}*/
 
+
+/*
 	// Launch UDP Socket 
 	if(procs_ctx== NULL) { // Sanity check
 		printf("PROCS module should be initialized previously.\n");
 		exit(-1);
-	}
+	}*/
 
 	//printf("Starting Socket...\n");
 //	socket_server_thr(&thr_ctx);
@@ -983,7 +987,7 @@ int main(int argc, char* argv[])
 	pthread_join(dmux_thread, NULL);
 	pthread_join(consumer_thread, NULL);
 //	pthread_join(http_thread, NULL); //MARIO
-//	pthread_join(socket_thread, NULL); //MARIO
+	pthread_join(socket_thread, NULL); //MARIO
 
 	if(procs_ctx!= NULL)
 		procs_close(&procs_ctx);
