@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 
 #include <libcjson/cJSON.h>
 #include <libmediaprocsutils/uri_parser.h>
@@ -34,6 +35,8 @@
 #include <libmediaprocsutils/stat_codes.h>
 #include <libmediaprocsutils/check_utils.h>
 #include <libmediaprocs/proc_if.h>
+
+struct timespec ts1, ts2, ts3, ts4;
 
 video_settings_enc_ctx_t* video_settings_enc_ctx_allocate()
 {
@@ -136,6 +139,9 @@ int video_settings_enc_ctx_restful_put(
 				str);
 		if(bit_rate_output_str!= NULL)
 			video_settings_enc_ctx->bit_rate_output= atoll(bit_rate_output_str);
+			clock_gettime( CLOCK_REALTIME, &ts4);
+			printf("\nTS4: %f\n", (float) (1.0*ts4.tv_nsec)*1e-9 + 1.0*ts4.tv_sec);
+			printf("TS4 - TS3: %f\n", (float) (1.0*(1.0*ts4.tv_nsec - ts3.tv_nsec*1.0)*1e-9 + 1.0*ts4.tv_sec - 1.0*ts3.tv_sec ));
 
 		// 'frame_rate_output'
 		frame_rate_output_str= uri_parser_query_str_get_value(
@@ -143,6 +149,9 @@ int video_settings_enc_ctx_restful_put(
 		if(frame_rate_output_str!= NULL)
 			video_settings_enc_ctx->frame_rate_output=
 					atoll(frame_rate_output_str);
+			clock_gettime( CLOCK_REALTIME, &ts4);
+			printf("\nTS4: %f\n", (float) (1.0*ts4.tv_nsec)*1e-9 + 1.0*ts4.tv_sec);
+			printf("TS4 - TS3: %f\n", (float) (1.0*(1.0*ts4.tv_nsec - ts3.tv_nsec*1.0)*1e-9 + 1.0*ts4.tv_sec - 1.0*ts3.tv_sec ));
 
 		//'width_output' 
 		width_output_str= uri_parser_query_str_get_value("width_output", str);
@@ -158,6 +167,9 @@ int video_settings_enc_ctx_restful_put(
 		gop_size_str= uri_parser_query_str_get_value("gop_size", str);
 		if(gop_size_str!= NULL)
 			video_settings_enc_ctx->gop_size= atoll(gop_size_str);
+			clock_gettime( CLOCK_REALTIME, &ts4);
+			printf("\nTS4: %f\n", (float) (1.0*ts4.tv_nsec)*1e-9 + 1.0*ts4.tv_sec);
+			printf("TS4 - TS3: %f\n", (float) (1.0*(1.0*ts4.tv_nsec - ts3.tv_nsec*1.0)*1e-9 + 1.0*ts4.tv_sec - 1.0*ts3.tv_sec ));
 
 		//'conf_preset' 
 		conf_preset_str= uri_parser_query_str_get_value("conf_preset", str);
@@ -176,7 +188,9 @@ int video_settings_enc_ctx_restful_put(
 		printf("\n el valor de ql = %s : \n",ql_str);
 		if(ql_str!= NULL)
 			video_settings_enc_ctx->ql= atoll(ql_str);
-
+			clock_gettime( CLOCK_REALTIME, &ts4);
+			printf("\nTS4: %f\n", (float) (1.0*ts4.tv_nsec)*1e-9 + 1.0*ts4.tv_sec);
+			printf("TS4 - TS3: %f\n", (float) (1.0*(1.0*ts4.tv_nsec - ts3.tv_nsec*1.0)*1e-9 + 1.0*ts4.tv_sec - 1.0*ts3.tv_sec ));
 	} else {
 
 		// In the case string format is JSON-REST, parse to cJSON structure 
@@ -280,7 +294,7 @@ int video_settings_enc_ctx_socket_put(
 
 	if(flag_is_query== 0) {
 
-		//'bit_rate_output' 
+/*		//'bit_rate_output' 
 		bit_rate_output_str= uri_parser_query_str_get_value("bit_rate_output",
 				str);
 		if(bit_rate_output_str!= NULL)
@@ -319,12 +333,11 @@ int video_settings_enc_ctx_socket_put(
 			video_settings_enc_ctx->conf_preset[strlen(conf_preset_str)]= 0;
 		}
 
-		printf("\n ---[video_settings.c -if] video_settings_enc_ctx_restful_put---\n");
 		//'ql' 
 		ql_str= uri_parser_query_str_get_value("ql", str);
-		printf("\n [NO SOCKET] el valor de ql = %s : \n",ql_str);
 		if(ql_str!= NULL)
 			video_settings_enc_ctx->ql= atoll(ql_str);
+*/
 
 	// [Mario] Codigo para capturar el valor pasado por Socket
 	} else {
@@ -349,17 +362,109 @@ int video_settings_enc_ctx_socket_put(
 		int res1 = atoi(function);
 		int res2 = atoi(value);
 
-		//'ql' 
-		printf("Datos del str: %s\n" , str);
-		printf("\n [SOCKET] el valor de ql = %d : \n",res2);
-		video_settings_enc_ctx->ql= res2;
+		switch(res1){
+			case 1:
+				//'ql' 
+				printf("Datos del str: %s\n" , str);
+				printf("\n [SOCKET] el valor de ql = %d\n",res2);
+				video_settings_enc_ctx->ql= res2;
+				clock_gettime( CLOCK_REALTIME, &ts2);
+				printf("\nTS2: %f\n", (float) (1.0*ts2.tv_nsec)*1e-9);
+				printf("TS2 - TS1: %f\n", (float) (1.0*(1.0*ts2.tv_nsec - ts1.tv_nsec*1.0)*1e-9 + 1.0*ts2.tv_sec - 1.0*ts1.tv_sec ));
 
-		memset(function,'\0', sizeof(function));
-		memset(value,'\0', sizeof(value));
+				memset(function,'\0', sizeof(function));
+				memset(value,'\0', sizeof(value));
 
-		h = 0;
-		j = 0;
-		aux = 0;
+				h = 0;
+				j = 0;
+				aux = 0;
+				break;
+
+			case 2:
+				//Frame Rate 
+				printf("Datos del str: %s\n" , str);
+				printf("\n [SOCKET] el valor de Frame Rate = %d\n",res2);
+				video_settings_enc_ctx->frame_rate_output= res2;
+				clock_gettime( CLOCK_REALTIME, &ts2);
+				printf("\nTS2: %f\n", (float) (1.0*ts2.tv_nsec)*1e-9);
+				printf("TS2 - TS1: %f\n", (float) (1.0*(1.0*ts2.tv_nsec - ts1.tv_nsec*1.0)*1e-9 + 1.0*ts2.tv_sec - 1.0*ts1.tv_sec ));
+
+				memset(function,'\0', sizeof(function));
+				memset(value,'\0', sizeof(value));
+
+				h = 0;
+				j = 0;
+				aux = 0;
+				break;
+
+			case 3:
+				//Bit Rate 
+				printf("Datos del str: %s\n" , str);
+				printf("\n [SOCKET] el valor de Bit Rate = %d\n",res2);
+				video_settings_enc_ctx->bit_rate_output= res2*1024;
+				clock_gettime( CLOCK_REALTIME, &ts2);
+				printf("\nTS2: %f\n", (float) (1.0*ts2.tv_nsec)*1e-9);
+				printf("TS2 - TS1: %f\n", (float) (1.0*(1.0*ts2.tv_nsec - ts1.tv_nsec*1.0)*1e-9 + 1.0*ts2.tv_sec - 1.0*ts1.tv_sec ));
+
+				memset(function,'\0', sizeof(function));
+				memset(value,'\0', sizeof(value));
+
+				h = 0;
+				j = 0;
+				aux = 0;
+				break;
+
+			case 4:
+				//Gop Size 
+				printf("Datos del str: %s\n" , str);
+				printf("\n [SOCKET] el valor de Gop Size = %d\n",res2);
+				video_settings_enc_ctx->gop_size= res2;
+				clock_gettime( CLOCK_REALTIME, &ts2);
+				printf("\nTS2: %f\n", (float) (1.0*ts2.tv_nsec)*1e-9);
+				printf("TS2 - TS1: %f\n", (float) (1.0*(1.0*ts2.tv_nsec - ts1.tv_nsec*1.0)*1e-9 + 1.0*ts2.tv_sec - 1.0*ts1.tv_sec ));
+
+				memset(function,'\0', sizeof(function));
+				memset(value,'\0', sizeof(value));
+
+				h = 0;
+				j = 0;
+				aux = 0;
+				break;
+
+			case 5:
+				//Width Output 
+				printf("Datos del str: %s\n" , str);
+				printf("\n [SOCKET] el valor de Width Output = %d\n",res2);
+				video_settings_enc_ctx->width_output= res2;
+				clock_gettime( CLOCK_REALTIME, &ts2);
+				printf("\nTS2: %f\n", (float) (1.0*ts2.tv_nsec)*1e-9);
+				printf("TS2 - TS1: %f\n", (float) (1.0*(1.0*ts2.tv_nsec - ts1.tv_nsec*1.0)*1e-9 + 1.0*ts2.tv_sec - 1.0*ts1.tv_sec ));
+
+				memset(function,'\0', sizeof(function));
+				memset(value,'\0', sizeof(value));
+
+				h = 0;
+				j = 0;
+				aux = 0;
+				break;
+
+			case 6:
+				//Height Output 
+				printf("Datos del str: %s\n" , str);
+				printf("\n [SOCKET] el valor de Height Output = %d\n",res2);
+				video_settings_enc_ctx->height_output= res2;
+				clock_gettime( CLOCK_REALTIME, &ts2);
+				printf("\nTS2: %f\n", (float) (1.0*ts2.tv_nsec)*1e-9);
+				printf("TS2 - TS1: %f\n", (float) (1.0*(1.0*ts2.tv_nsec - ts1.tv_nsec*1.0)*1e-9 + 1.0*ts2.tv_sec - 1.0*ts1.tv_sec ));
+
+				memset(function,'\0', sizeof(function));
+				memset(value,'\0', sizeof(value));
+
+				h = 0;
+				j = 0;
+				aux = 0;
+				break;
+		}
 	}
 
 	end_code= STAT_SUCCESS;
