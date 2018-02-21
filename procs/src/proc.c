@@ -357,7 +357,6 @@ int proc_opt(proc_ctx_t *proc_ctx, const char *tag, ...)
 
 int proc_vopt(proc_ctx_t *proc_ctx, const char *tag, va_list arg)
 {
-	printf("[proc.c] proc_vopt socket \n");
 	int end_code= STAT_ERROR;
 	const proc_if_t *proc_if= NULL;
 	int (*rest_put)(proc_ctx_t *proc_ctx, const char *str)= NULL;
@@ -384,10 +383,12 @@ int proc_vopt(proc_ctx_t *proc_ctx, const char *tag, va_list arg)
 		end_code= procs_id_get(proc_ctx, LOG_CTX_GET(), rest_fmt, ref_reponse);
 	} else if(TAG_IS("PROC_PUT")) {
 		end_code= STAT_ENOTFOUND;
-		if(proc_if!= NULL && (rest_put= proc_if->rest_put)!= NULL && (socket_put= proc_if->socket_put)!=NULL)
-			end_code= rest_put(proc_ctx, va_arg(arg, const char*));
-//			end_code= socket_put(proc_ctx, va_arg(arg, const char*));// Mario
-			//end_code= socket_put(proc_ctx, "1,30");// Mario
+		if(proc_if!= NULL && (rest_put= proc_if->rest_put)!= NULL)
+			end_code= rest_put(proc_ctx, va_arg(arg, const char*));	
+	} else if(TAG_IS("PROC_SOCKET_PUT")) {
+		end_code= STAT_ENOTFOUND;
+		if (proc_if!= NULL && (socket_put= proc_if->socket_put)!=NULL)
+			end_code= socket_put(proc_ctx, va_arg(arg, const char*));// Mario		
 	} else {
 		if(proc_if!= NULL && (opt= proc_if->opt)!= NULL)
 		{

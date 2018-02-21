@@ -972,6 +972,8 @@ static int procs_id_opt(procs_ctx_t *procs_ctx, const char *tag,
 				(void**)va_arg(arg, char**));
 	} else if(TAG_IS("PROCS_ID_PUT")) {
 		end_code= proc_opt(proc_ctx, "PROC_PUT", va_arg(arg, const char*));
+	} else if(TAG_IS("PROCS_ID_SOCKET")) {
+		end_code= proc_opt(proc_ctx, "PROC_SOCKET_PUT", va_arg(arg, const char*));
 	} else if(TAG_IS("PROCS_ID_UNBLOCK")) {
 		end_code= proc_opt(proc_ctx, "PROC_UNBLOCK");
 	} else {
