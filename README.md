@@ -1,11 +1,11 @@
-# MediaProcessors
+# FFMPEG-Control-API
 Generic library for multimedia processing and streaming with REST-based control 
 interface.
 
 Dependencies:
 =============
 
-MediaProcessors depends on the following third party libraries (concrete 
+FFMPEG-Control-API depends on the following third party libraries (concrete 
 version tested and license is specified in parenthesis):
 
 > cjson (1.5.8; MIT)<br>
@@ -32,7 +32,7 @@ BUILD & INSTALLATION:
 OS required: Linux.<br>
 Successfully tested on Ubuntu 16.04 LTS.
 
-MediaProcessors provides four libraries:
+FFMPEG-Control-API provides four libraries:
 
 1.- utils: Common tools used by the rest of libraries.<br>
 Dependencies:
@@ -87,7 +87,7 @@ Documentation
 First o all, please <b>generate the documentation</b>.
 Go to the 'docs' folder
 
-> $ cd MediaProcessors/docs/
+> $ cd FFMPEG-Control-API/docs/
 
 and perform
 
@@ -99,5 +99,5 @@ Change to the 'docs/html' folder
 
 and open the file 'index.html' (documentation index) with any browser. 
 
-Now please continue ahead with MediaProcessors [documentation](md_DOCUMENTATION.html)<br>
+Now please continue ahead with FFMPEG-Control-API [documentation](md_DOCUMENTATION.html)<br>
 (To see documentation directly from GitHub follow [this link](https://rantoniello.github.io/MediaProcessors/html/md_DOCUMENTATION.html))
