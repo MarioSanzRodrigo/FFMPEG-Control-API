@@ -91,6 +91,8 @@ int procs_api_http_req_handler(procs_ctx_t *procs_ctx, const char *url,
 	int64_t aux_id= -1;
 	LOG_CTX_INIT(NULL);
 
+	printf("[proc_api_http.c] proc_api_http_req_handler \n");
+
 	/* Check arguments.
 	 * NOTE: Arguments 'query_string' and 'content' are allowed to be NULL.
 	 */
@@ -150,9 +152,11 @@ int procs_api_http_req_handler(procs_ctx_t *procs_ctx, const char *url,
 			goto end;
 		}
 
-		if(URL_METHOD_IS("PUT"))
+		if(URL_METHOD_IS("PUT")) {
+			printf("[proc_api_http.c] proc_api_http_req_handler URL METHOD IS PUT\n");
 			end_code= procs_opt(procs_ctx, "PROCS_ID_PUT", proc_id,
 					query_string);
+		}
 		else if (URL_METHOD_IS("GET"))
 			end_code= procs_opt(procs_ctx, "PROCS_ID_GET", proc_id,
 					&data_obj_str);

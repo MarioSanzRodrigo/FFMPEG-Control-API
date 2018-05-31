@@ -41,6 +41,8 @@
 #include "proc_frame_2_ffmpeg.h"
 #include "video_settings.h"
 
+
+
 /* **** Definitions **** */
 
 /**
@@ -113,7 +115,7 @@ static int ffmpeg_mlhe_enc_process_frame(proc_ctx_t *proc_ctx,
 static int ffmpeg_mlhe_enc_rest_put(proc_ctx_t *proc_ctx, const char *str);
 static int ffmpeg_mlhe_enc_rest_get(proc_ctx_t *proc_ctx,
 		const proc_if_rest_fmt_t rest_fmt, void **ref_reponse);
-
+static int ffmpeg_mlhe_enc_socket_put(proc_ctx_t *proc_ctx, const char *str);
 static int ffmpeg_mlhe_enc_settings_ctx_init(
 		volatile ffmpeg_mlhe_enc_settings_ctx_t *ffmpeg_mlhe_enc_settings_ctx,
 		log_ctx_t *log_ctx);
@@ -152,6 +154,7 @@ const proc_if_t proc_if_ffmpeg_mlhe_enc=
 	ffmpeg_mlhe_enc_rest_put,
 	ffmpeg_mlhe_enc_rest_get,
 	ffmpeg_mlhe_enc_process_frame,
+	ffmpeg_mlhe_enc_socket_put,
 	NULL, // no extra options
 	proc_frame_ctx_2_avframe,
 	avframe_release,
@@ -168,6 +171,7 @@ const proc_if_t proc_if_ffmpeg_mlhe_dec=
 	ffmpeg_mlhe_dec_rest_put,
 	ffmpeg_mlhe_dec_rest_get,
 	ffmpeg_mlhe_dec_process_frame,
+	NULL, // socket udp
 	NULL, // no extra options
 	proc_frame_ctx_2_avpacket,
 	avpacket_release,
@@ -181,6 +185,7 @@ const proc_if_t proc_if_ffmpeg_mlhe_dec=
 static proc_ctx_t* ffmpeg_mlhe_enc_open(const proc_if_t *proc_if,
 		const char *settings_str, log_ctx_t *log_ctx, va_list arg)
 {
+	printf("\n ---[ffmpeg_lhe.c] ffmpeg_mlhe_enc_open---\n");
 	int ret_code, end_code= STAT_ERROR;
 	ffmpeg_mlhe_enc_ctx_t *ffmpeg_mlhe_enc_ctx= NULL;
 	volatile ffmpeg_mlhe_enc_settings_ctx_t *ffmpeg_mlhe_enc_settings_ctx=
@@ -211,6 +216,11 @@ static proc_ctx_t* ffmpeg_mlhe_enc_open(const proc_if_t *proc_if,
 
 	/* Parse and put given settings */
 	ret_code= ffmpeg_mlhe_enc_rest_put((proc_ctx_t*)ffmpeg_mlhe_enc_ctx,
+			settings_str);
+	// [Mario] CHECK_DO(ret_code== STAT_SUCCESS, goto end);
+
+	/* Parse and put given settings */
+	ret_code= ffmpeg_mlhe_enc_socket_put((proc_ctx_t*)ffmpeg_mlhe_enc_ctx,
 			settings_str);
 	CHECK_DO(ret_code== STAT_SUCCESS, goto end);
 
@@ -317,6 +327,7 @@ end:
  */
 static int ffmpeg_mlhe_enc_rest_put(proc_ctx_t *proc_ctx, const char *str)
 {
+	printf("\n ---[ffmpeg_lhe.c] ffmpeg_mlhe_enc_rest_put---\n");
 	int ret_code;
 	ffmpeg_mlhe_enc_ctx_t *ffmpeg_mlhe_enc_ctx= NULL;
 	volatile ffmpeg_mlhe_enc_settings_ctx_t *ffmpeg_mlhe_enc_settings_ctx= NULL;
@@ -352,6 +363,52 @@ static int ffmpeg_mlhe_enc_rest_put(proc_ctx_t *proc_ctx, const char *str)
 
 	return STAT_SUCCESS;
 }
+
+/**
+ * Implements the proc_if_s::socket_put callback.
+ * See .proc_if.h for further details.
+ */
+
+static int ffmpeg_mlhe_enc_socket_put(proc_ctx_t *proc_ctx, const char *str)
+{
+	printf("[ffmpeg_lhe.c] ffmpeg_mlhe_enc_socket_put\n");
+	int ret_code;
+	ffmpeg_mlhe_enc_ctx_t *ffmpeg_mlhe_enc_ctx= NULL;
+	volatile ffmpeg_mlhe_enc_settings_ctx_t *ffmpeg_mlhe_enc_settings_ctx= NULL;
+	volatile video_settings_enc_ctx_t *video_settings_enc_ctx= NULL;
+	LOG_CTX_INIT(NULL);
+
+	/* Check arguments */
+	CHECK_DO(proc_ctx!= NULL, return STAT_ERROR);
+	CHECK_DO(str!= NULL, return STAT_ERROR);
+
+	LOG_CTX_SET(proc_ctx->log_ctx);
+
+	/* Get FFmpeg video encoder settings contexts */
+	ffmpeg_mlhe_enc_ctx= (ffmpeg_mlhe_enc_ctx_t*)proc_ctx;
+	ffmpeg_mlhe_enc_settings_ctx=
+			&ffmpeg_mlhe_enc_ctx->ffmpeg_mlhe_enc_settings_ctx;
+	video_settings_enc_ctx=
+			&ffmpeg_mlhe_enc_settings_ctx->video_settings_enc_ctx;
+
+	/* PUT generic video encoder settings */
+	ret_code= video_settings_enc_ctx_socket_put(video_settings_enc_ctx, str,
+			LOG_CTX_GET());
+	if(ret_code!= STAT_SUCCESS)
+		return ret_code;
+
+	/* PUT specific MLHE video encoder settings */
+	// Reserved for future use
+
+	/* Finally that we have new settings parsed, reset FFMPEG processor */
+	ffmpeg_video_reset_on_new_settings(proc_ctx,
+			(volatile void*)video_settings_enc_ctx, 1/*Signal is an encoder*/,
+			LOG_CTX_GET());
+
+	return STAT_SUCCESS;
+}
+
+
 
 /**
  * Implements the proc_if_s::rest_get callback.

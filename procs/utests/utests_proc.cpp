@@ -112,7 +112,7 @@ SUITE(UTESTS_PROC)
 			bypass_proc_rest_put,
 			bypass_proc_rest_get,
 			bypass_proc_process_frame,
-			NULL, NULL, NULL, NULL
+			NULL, NULL, NULL, NULL, NULL
 		};
 		uint32_t fifo_ctx_maxsize[PROC_IO_NUM]= {FIFO_SIZE, FIFO_SIZE};
 		proc_frame_ctx_t *proc_frame_ctx= NULL;
@@ -198,3 +198,5 @@ end:
 #undef FIFO_SIZE
 	}
 }
+
+

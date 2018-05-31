@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #include <mongoose.h>
 #include <libcjson/cJSON.h>
@@ -57,6 +58,12 @@
 #include <libmediaprocscodecs/ffmpeg_mp3.h>
 #include <libmediaprocscodecs/ffmpeg_lhe.h>
 
+// Agregada por Mario
+#include <libmediaprocscodecs/video_settings.h>
+
+#define BUFLEN 512	//Longitud max del buffer
+#define PORT 8888	//Puerto UDP Socket
+
 /* **** Definitions **** */
 
 #define LISTENING_PORT 			"8088"
@@ -69,6 +76,7 @@
 #define BREAK_EVENT  (SDL_USEREVENT + 2)
 
 static volatile int flag_app_exit= 0;
+struct timespec ts1, ts3;
 
 
 /**
@@ -83,6 +91,15 @@ typedef struct thr_ctx_s {
 	const char *mime_setting_video;
 	procs_ctx_t *procs_ctx;
 } thr_ctx_t;
+
+/**
+ * Socket data.
+ */
+typedef struct socket_thr_ctx_s {
+	volatile int *ref_flag_exit;
+	const char *ref_listening_port;
+	procs_ctx_t *procs_ctx;
+} socket_thr_ctx_t;
 
 static void prepare_and_send_raw_video_data(procs_ctx_t *procs_ctx,
 		int enc_proc_id, volatile int *ref_flag_exit)
@@ -259,7 +276,7 @@ static void* dmux_thr(void *t)
 				&proc_frame_ctx);
 	}
 	if(ret_code!= STAT_SUCCESS || proc_frame_ctx== NULL) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 1: %d\n", __LINE__);
 		exit(-1);
 	}
 
@@ -267,17 +284,17 @@ static void* dmux_thr(void *t)
 	ret_code= procs_opt(thr_ctx->procs_ctx, "PROCS_ID_GET",
 			thr_ctx->dmux_proc_id, &rest_str);
 	if(ret_code!= STAT_SUCCESS || rest_str== NULL) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 2: %d\n", __LINE__);
 		exit(-1);
 	}
 	if((cjson_rest= cJSON_Parse(rest_str))== NULL) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 3: %d\n", __LINE__);
 		exit(-1);
 	}
 	// Elementary streams objects array
 	if((cjson_es_array= cJSON_GetObjectItem(cjson_rest,
 			"elementary_streams"))== NULL) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 4: %d\n", __LINE__);
 		exit(-1);
 	}
 	// Iterate elementary stream objects and find the corresponding Id.
@@ -293,7 +310,7 @@ static void* dmux_thr(void *t)
 			/* Get stream Id. */
 			cjson_aux= cJSON_GetObjectItem(cjson_es, "elementary_stream_id");
 			if(cjson_aux== NULL) {
-				fprintf(stderr, "Error at line: %d\n", __LINE__);
+				fprintf(stderr, "Error at line 5: %d\n", __LINE__);
 				exit(-1);
 			}
 			elementary_stream_id= cjson_aux->valueint;
@@ -301,7 +318,7 @@ static void* dmux_thr(void *t)
 			/* Check MIME type and assign Id. */
 			cjson_aux= cJSON_GetObjectItem(cjson_es, "sdp_mimetype");
 			if(cjson_aux== NULL) {
-				fprintf(stderr, "Error at line: %d\n", __LINE__);
+				fprintf(stderr, "Error at line6: %d\n", __LINE__);
 				exit(-1);
 			}
 			mime= cjson_aux->valuestring;
@@ -312,7 +329,7 @@ static void* dmux_thr(void *t)
 	free(rest_str); rest_str= NULL;
 	cJSON_Delete(cjson_rest); cjson_rest= NULL;
 	if(elem_strem_id_video_client< 0) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 7: %d\n", __LINE__);
 		exit(-1);
 	}
 
@@ -528,9 +545,13 @@ static void http_event_handler(struct mg_connection *c, int ev, void *p)
 		}
 
 		/* Process HTTP request */
-		if(url_str!= NULL && method_str!= NULL)
+		if(url_str!= NULL && method_str!= NULL) {
 			procs_api_http_req_handler(thr_ctx->procs_ctx, url_str,
 					qstring_str, method_str, body_str, body_len, &str_response);
+			printf("[main.c] procs_api_http_req_handler \n");
+			clock_gettime( CLOCK_REALTIME, &ts3);
+			printf("TS3: %f\n", (float) (1.0*ts3.tv_nsec)*1e-9 + 1.0*ts3.tv_sec);
+		}
 		/* Send response */
 		if(str_response!= NULL && strlen(str_response)> 0) {
 			//printf("str_response: %s (len: %d)\n", str_response,
@@ -599,10 +620,97 @@ static void* http_server_thr(void *t)
 	return NULL;
 }
 
+void die(char *s)
+{
+	perror(s);
+	exit(1);
+}
+
+static void* socket_server_thr(void *t)
+{
+
+    	thr_ctx_t *thr_ctx= (thr_ctx_t*)t;
+	const char *error_str= NULL;
+
+	// Check argument 
+	if(thr_ctx== NULL) {
+		fprintf(stderr, "Bad argument '%s'\n", __FUNCTION__);
+		exit(1);
+	}
+
+   	struct sockaddr_in serv_addr, serv_other;
+    	int s, i, recv_len;
+    	char buf[BUFLEN]="";
+    	socklen_t slen = sizeof(serv_other);
+     
+    	// Creacion del Socket en funcion del tipo de protocolo
+    	if ((s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+    	{
+        	die("socket");
+    	}
+     
+    	// Inicializar a cero el struct serv_addr
+    	memset((char *) &serv_addr, 0, sizeof(serv_addr));
+     
+    	serv_addr.sin_family = AF_INET;
+    	serv_addr.sin_port = htons(atoi("8888"));
+    	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+     
+    	// Enlazar socket al puerto
+    	if( bind(s , (struct sockaddr*)&serv_addr, sizeof(serv_addr) ) == -1)
+    	{
+        	die("bind");
+    	}
+
+     
+    	// Escuchando para recibir datos
+    	while(flag_app_exit== 0)
+    	{
+		while(1)
+	    	{
+			printf("\nWaiting for data...\n");
+			fflush(stdout);
+
+			// Tratamos de recibir los datos
+			if ((recv_len = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &serv_other, &slen)) == -1)
+			{
+			    die("recvfrom()");
+			}
+			printf("Pillo el ts1\n");
+			clock_gettime( CLOCK_REALTIME, &ts1);
+			printf("TS1: %f\n", (float) (1.0*ts1.tv_nsec)*1e-9);
+
+			// Mostramos string recibido (funcion , valor) 
+			printf("\nReceived packet from %s:%d\n", inet_ntoa(serv_other.sin_addr), ntohs(serv_other.sin_port));
+			printf("Datos enviados: %s\n" , buf);
+	
+
+
+			// Forzamos el tercer campo "proc_id" a 1.
+			//procs_opt(thr_ctx->procs_ctx, "PROCS_ID_PUT",1,buf);
+			procs_opt(thr_ctx->procs_ctx, "PROCS_ID_SOCKET",0,buf);
+	
+			//[Para TEST] Enviamos ACK
+			sendto(s, "ACK", 3, 0, (struct sockaddr*) &serv_other, slen);
+
+
+			// Puesta a cero de los buffers y las variables aux
+			memset(buf,'\0', sizeof(buf));
+
+
+
+		}
+	}
+    	close(s);
+    	return NULL;
+}
+
+
 static void stream_proc_quit_signal_handler()
 {
 	printf("signaling application to finalize...\n"); fflush(stdout);
 	flag_app_exit= 1;
+	exit(-1); 	//Mario
 }
 
 /**
@@ -620,19 +728,19 @@ static void procs_post(procs_ctx_t *procs_ctx, const char *proc_name,
 	ret_code= procs_opt(procs_ctx, "PROCS_POST", proc_name, proc_settings,
 			&rest_str);
 	if(ret_code!= STAT_SUCCESS || rest_str== NULL) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 8: %d\n", __LINE__);
 		exit(-1);
 	}
 	if((cjson_rest= cJSON_Parse(rest_str))== NULL) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 9: %d\n", __LINE__);
 		exit(-1);
 	}
 	if((cjson_aux= cJSON_GetObjectItem(cjson_rest, "proc_id"))== NULL) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 10: %d\n", __LINE__);
 		exit(-1);
 	}
 	if((*ref_proc_id= cjson_aux->valuedouble)< 0) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 11: %d\n", __LINE__);
 		exit(-1);
 	}
 	free(rest_str); rest_str= NULL;
@@ -641,17 +749,22 @@ static void procs_post(procs_ctx_t *procs_ctx, const char *proc_name,
 
 int main(int argc, char* argv[])
 {
+
+
 	sigset_t set;
-	pthread_t producer_thread, mux_thread, dmux_thread, consumer_thread;
+//	pthread_t producer_thread, mux_thread, dmux_thread, consumer_thread;
+	pthread_t producer_thread, mux_thread, dmux_thread, consumer_thread, socket_thread;
 	int ret_code, enc_proc_id= -1, dec_proc_id= -1, mux_proc_id= -1,
 			dmux_proc_id= -1, elem_strem_id_video_server= -1;
 	procs_ctx_t *procs_ctx= NULL;
 	char *rest_str= NULL, *settings_str= NULL;
 	cJSON *cjson_rest= NULL, *cjson_aux= NULL;
-    thr_ctx_t thr_ctx= {0};
-    const char *video_settings=
+ 	thr_ctx_t thr_ctx= {0};
+    	const char *video_settings=
     		"width_output="VIDEO_WIDTH
-			"&height_output="VIDEO_HEIGHT;
+		"&height_output="VIDEO_HEIGHT;
+
+
 #define LHE_VIDEO
 #ifdef MPEG2_VIDEO
     const proc_if_t *proc_if_enc= &proc_if_ffmpeg_m2v_enc;
@@ -659,6 +772,7 @@ int main(int argc, char* argv[])
     const char *mime_setting= "sdp_mimetype=video/mp2v";
 #endif
 #ifdef LHE_VIDEO
+    printf("\n definicion proc_if_ffmpeg_mlhe_enc \n");
     const proc_if_t *proc_if_enc= &proc_if_ffmpeg_mlhe_enc;
     const proc_if_t *proc_if_dec= &proc_if_ffmpeg_mlhe_dec;
     const char *mime_setting= "sdp_mimetype=video/mlhe";
@@ -670,6 +784,7 @@ int main(int argc, char* argv[])
 #endif
     const proc_if_t *proc_if_mux= &proc_if_live555_rtsp_mux;
     const proc_if_t *proc_if_dmux= &proc_if_live555_rtsp_dmux;
+
 
 	/* Set SIGNAL handlers to this process */
 	sigfillset(&set);
@@ -685,7 +800,7 @@ int main(int argc, char* argv[])
 
 	/* Open processors (PROCS) module */
 	if(procs_module_open(NULL)!= STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 12: %d\n", __LINE__);
 		exit(-1);
 	}
 
@@ -694,53 +809,58 @@ int main(int argc, char* argv[])
 	 */
 	if(procs_module_opt("PROCS_REGISTER_TYPE", &proc_if_ffmpeg_m2v_enc)!=
 			STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 13: %d\n", __LINE__);
 		exit(-1);
 	}
 	if(procs_module_opt("PROCS_REGISTER_TYPE", &proc_if_ffmpeg_m2v_dec)!=
 			STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 14: %d\n", __LINE__);
 		exit(-1);
 	}
 	if(procs_module_opt("PROCS_REGISTER_TYPE", &proc_if_ffmpeg_mlhe_enc)!=
 			STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 15: %d\n", __LINE__);
 		exit(-1);
 	}
+	printf("\n condicion-registro proc_if_ffmpeg_mlhe_enc \n");
 	if(procs_module_opt("PROCS_REGISTER_TYPE", &proc_if_ffmpeg_mlhe_dec)!=
 			STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 16: %d\n", __LINE__);
 		exit(-1);
 	}
 	if(procs_module_opt("PROCS_REGISTER_TYPE", &proc_if_ffmpeg_x264_enc)!=
 			STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 17: %d\n", __LINE__);
 		exit(-1);
 	}
 	if(procs_module_opt("PROCS_REGISTER_TYPE", &proc_if_ffmpeg_x264_dec)!=
 			STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 18: %d\n", __LINE__);
 		exit(-1);
 	}
 	if(procs_module_opt("PROCS_REGISTER_TYPE", &proc_if_live555_rtsp_mux)!=
 			STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 19: %d\n", __LINE__);
 		exit(-1);
 	}
 	if(procs_module_opt("PROCS_REGISTER_TYPE", &proc_if_live555_rtsp_dmux)!=
 			STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 20: %d\n", __LINE__);
 		exit(-1);
 	}
 
 	/* Get PROCS module's instance */
 	if((procs_ctx= procs_open(NULL))== NULL) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 21: %d\n", __LINE__);
 		exit(-1);
 	}
 
     /* Register an encoder instance and get corresponding processor Id. */
+	
+	// [MARIO] -> Llamadas a video_settings.c y ffmpeg_lhe.c a partir de aqui
+	printf("\n registro instancia encoder - proc_if_enc \n");
 	procs_post(procs_ctx, proc_if_enc->proc_name, video_settings, &enc_proc_id);
+	printf("\n post registro instancia encoder - proc_if_enc \n");
 
     /* Register a decoder instance and get corresponding processor Id. */
 	procs_post(procs_ctx, proc_if_dec->proc_name, "", &dec_proc_id);
@@ -752,20 +872,20 @@ int main(int argc, char* argv[])
 	ret_code= procs_opt(procs_ctx, "PROCS_ID_ES_MUX_REGISTER", mux_proc_id,
 			mime_setting, &rest_str);
 	if(ret_code!= STAT_SUCCESS || rest_str== NULL) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 22: %d\n", __LINE__);
 		exit(-1);
 	}
 	if((cjson_rest= cJSON_Parse(rest_str))== NULL) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 23: %d\n", __LINE__);
 		exit(-1);
 	}
 	if((cjson_aux= cJSON_GetObjectItem(cjson_rest, "elementary_stream_id"))==
 			NULL) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 24: %d\n", __LINE__);
 		exit(-1);
 	}
 	if((elem_strem_id_video_server= cjson_aux->valuedouble)< 0) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 25: %d\n", __LINE__);
 		exit(-1);
 	}
 	free(rest_str); rest_str= NULL;
@@ -778,6 +898,7 @@ int main(int argc, char* argv[])
     /* Launch producer, encoding-multiplexing, de-multiplexing-decoder,
      * consumer (rendering) and HTTP-sever threads.
      */
+
     thr_ctx.flag_exit= 0;
     thr_ctx.enc_proc_id= enc_proc_id;
     thr_ctx.dec_proc_id= dec_proc_id;
@@ -789,51 +910,75 @@ int main(int argc, char* argv[])
 	ret_code= pthread_create(&producer_thread, NULL, producer_thr_video,
 			&thr_ctx);
 	if(ret_code!= 0) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 26: %d\n", __LINE__);
 		exit(-1);
 	}
 	ret_code= pthread_create(&mux_thread, NULL, mux_thr, &thr_ctx);
 	if(ret_code!= 0) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 27: %d\n", __LINE__);
 		exit(-1);
 	}
 	ret_code= pthread_create(&dmux_thread, NULL, dmux_thr, &thr_ctx);
 	if(ret_code!= 0) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 28: %d\n", __LINE__);
 		exit(-1);
 	}
 	ret_code= pthread_create(&consumer_thread, NULL, consumer_thr_video,
 			&thr_ctx);
 	if(ret_code!= 0) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 29: %d\n", __LINE__);
 		exit(-1);
 	}
 
+
+
+	printf("Starting Socket UDP Server...\n");
+	ret_code= pthread_create(&socket_thread, NULL, socket_server_thr,
+			&thr_ctx); //MARIO
+	printf("##################### %d: \n",ret_code);
+	if(ret_code!= 0) {
+		fprintf(stderr, "Error at line 30: %d\n", __LINE__);
+		exit(-1);
+	}
+
+
+/*
+	// Launch UDP Socket 
+	if(procs_ctx== NULL) { // Sanity check
+		printf("PROCS module should be initialized previously.\n");
+		exit(-1);
+	}*/
+
+	//printf("Starting Socket...\n");
+//	socket_server_thr(&thr_ctx);
+	
+
 	/* Server main processing loop */
-	printf("Starting server...\n"); fflush(stdout);
+	//printf("EY! Starting server...\n"); fflush(stdout);
 	http_server_thr(&thr_ctx);
 
     /* Join the threads */
+
     thr_ctx.flag_exit= 1;
 	ret_code= procs_opt(procs_ctx, "PROCS_ID_DELETE",
 			enc_proc_id); // before joining to unblock processor
 	if(ret_code!= STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 32: %d\n", __LINE__);
 		exit(-1);
 	}
 	ret_code= procs_opt(procs_ctx, "PROCS_ID_DELETE", dec_proc_id);
 	if(ret_code!= STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 33: %d\n", __LINE__);
 		exit(-1);
 	}
 	ret_code= procs_opt(procs_ctx, "PROCS_ID_DELETE", dmux_proc_id);
 	if(ret_code!= STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 34: %d\n", __LINE__);
 		exit(-1);
 	}
 	ret_code= procs_opt(procs_ctx, "PROCS_ID_DELETE", mux_proc_id);
 	if(ret_code!= STAT_SUCCESS) {
-		fprintf(stderr, "Error at line: %d\n", __LINE__);
+		fprintf(stderr, "Error at line 35: %d\n", __LINE__);
 		exit(-1);
 	}
 
@@ -841,6 +986,8 @@ int main(int argc, char* argv[])
 	pthread_join(mux_thread, NULL);
 	pthread_join(dmux_thread, NULL);
 	pthread_join(consumer_thread, NULL);
+//	pthread_join(http_thread, NULL); //MARIO
+	pthread_join(socket_thread, NULL); //MARIO
 
 	if(procs_ctx!= NULL)
 		procs_close(&procs_ctx);

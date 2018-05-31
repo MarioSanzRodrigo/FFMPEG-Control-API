@@ -415,7 +415,6 @@ int procs_opt(procs_ctx_t *procs_ctx, const char *tag, ...)
 	va_list arg;
 	int end_code= STAT_ERROR;
 	LOG_CTX_INIT(NULL);
-
 	/* Check arguments */
 	CHECK_DO(procs_ctx!= NULL, return STAT_ERROR);
 	CHECK_DO(tag!= NULL, return STAT_ERROR);
@@ -973,6 +972,8 @@ static int procs_id_opt(procs_ctx_t *procs_ctx, const char *tag,
 				(void**)va_arg(arg, char**));
 	} else if(TAG_IS("PROCS_ID_PUT")) {
 		end_code= proc_opt(proc_ctx, "PROC_PUT", va_arg(arg, const char*));
+	} else if(TAG_IS("PROCS_ID_SOCKET")) {
+		end_code= proc_opt(proc_ctx, "PROC_SOCKET_PUT", va_arg(arg, const char*));
 	} else if(TAG_IS("PROCS_ID_UNBLOCK")) {
 		end_code= proc_opt(proc_ctx, "PROC_UNBLOCK");
 	} else {

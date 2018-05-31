@@ -258,6 +258,14 @@ typedef struct proc_if_s {
 	 */
 	int (*process_frame)(proc_ctx_t *proc_ctx, fifo_ctx_t *fifo_ctx_iput,
 			fifo_ctx_t *fifo_ctx_oput);
+
+	/**
+	* Modificacion de parametros recibidos mediante socket udp
+	*/
+	int (*socket_put)(proc_ctx_t *proc_ctx, const char *str);
+	
+	// [Modificado]
+
 	/**
 	 * Request for specific processor options.
 	 * This callback is optional (can be set to NULL).
@@ -272,7 +280,9 @@ typedef struct proc_if_s {
 	 * @return Status code (STAT_SUCCESS code in case of success, for other
 	 * code values please refer to .stat_codes.h).
 	 */
-	int (*opt)(proc_ctx_t *proc_ctx, const char *tag, va_list arg);
+	 int (*opt)(proc_ctx_t *proc_ctx, const char *tag, va_list arg);
+
+
 	/**
 	 * This callback is registered in the FIFO management API and is used to
 	 * internally duplicate the input frame structure when it is pushed to the

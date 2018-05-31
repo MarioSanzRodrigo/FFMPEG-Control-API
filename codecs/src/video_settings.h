@@ -144,6 +144,19 @@ int video_settings_enc_ctx_restful_put(
 		const char *str, log_ctx_t *log_ctx);
 
 /**
+ * Put net settings passed by argument by socket UDP in string format.
+ * @param video_settings_enc_ctx Pointer to the generic video encoder settings
+ * context structure to be modified.
+ * @param str New parameters passed in query-string or JSON format.
+ * @param log_ctx Externally defined LOG module context structure.
+ * @return Status code (STAT_SUCCESS code in case of success, for other code
+ * values please refer to .stat_codes.h).
+ */
+int video_settings_enc_ctx_socket_put(
+		volatile video_settings_enc_ctx_t *video_settings_enc_ctx,
+		const char *str, log_ctx_t *log_ctx);
+
+/**
  * Translate and get the video encoder generic settings in a cJSON structure.
  * @param video_settings_enc_ctx Pointer to the generic video encoder settings
  * context structure to be translated.
